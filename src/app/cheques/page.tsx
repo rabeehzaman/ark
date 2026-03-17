@@ -70,7 +70,8 @@ export default function ChequesPage() {
     fetcher
   );
 
-  const { data: parties } = useSWR<Party[]>("/api/parties", fetcher);
+  const { data: partiesRaw } = useSWR<Party[]>("/api/parties", fetcher);
+  const parties = Array.isArray(partiesRaw) ? partiesRaw : [];
 
   const handleExport = () => {
     window.open("/api/export", "_blank");
@@ -118,7 +119,7 @@ export default function ChequesPage() {
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="all">All Parties</SelectItem>
-            {(parties ?? []).map((p: Party) => (
+            {parties.map((p: Party) => (
               <SelectItem key={p.id} value={p.id}>
                 {p.name}
               </SelectItem>

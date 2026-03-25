@@ -1,30 +1,45 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { Prisma } from "@/generated/prisma/client";
 
-export async function GET() {
+export async function GET(req: NextRequest) {
   try {
+    const sp = req.nextUrl.searchParams;
+    const dateFrom = sp.get("dateFrom");
+    const dateTo = sp.get("dateTo");
+
+    const dateFilter: Prisma.ChequeWhereInput = {};
+    if (dateFrom || dateTo) {
+      dateFilter.date = {};
+      if (dateFrom) dateFilter.date.gte = new Date(dateFrom);
+      if (dateTo) dateFilter.date.lte = new Date(dateTo);
+    }
+
     const [totalCheques, statusCounts, totalAmount, recentCheques, topParties] =
       await Promise.all([
-        prisma.cheque.count(),
+        prisma.cheque.count({ where: dateFilter }),
         prisma.cheque.groupBy({
           by: ["status"],
+          where: dateFilter,
           _sum: { amount: true },
           _count: true,
         }),
-        prisma.cheque.aggregate({ _sum: { amount: true } }),
+        prisma.cheque.aggregate({ where: dateFilter, _sum: { amount: true } }),
         prisma.cheque.findMany({
+          where: dateFilter,
           take: 10,
           orderBy: { createdAt: "desc" },
           include: { party: { select: { name: true, slug: true } } },
         }),
         prisma.party.findMany({
-          where: { cheques: { some: {} } },
+          where: { cheques: { some: dateFilter } },
           select: {
             id: true,
             name: true,
             slug: true,
-            _count: { select: { cheques: true } },
+            _count: { select: { cheques: { where: dateFilter } } },
             cheques: {
+              where: dateFilter,
               select: { amount: true },
             },
           },

@@ -45,6 +45,8 @@ import {
   XCircle,
   Clock,
 } from "lucide-react";
+import { DateRange } from "react-day-picker";
+import { DateRangePicker } from "@/components/date-range-picker";
 import Link from "next/link";
 import { toast } from "sonner";
 
@@ -83,6 +85,7 @@ export default function PartyDetailPage({
 
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [search, setSearch] = useState("");
+  const [dateRange, setDateRange] = useState<DateRange | undefined>();
   const [formOpen, setFormOpen] = useState(false);
   const [editingCheque, setEditingCheque] = useState<Cheque | null>(null);
   const [deleteId, setDeleteId] = useState<string | null>(null);
@@ -91,6 +94,11 @@ export default function PartyDetailPage({
     if (statusFilter !== "all" && c.status !== statusFilter) return false;
     if (search && !c.chequeNumber.toLowerCase().includes(search.toLowerCase()))
       return false;
+    if (dateRange?.from && c.date) {
+      const chequeDate = new Date(c.date);
+      if (chequeDate < dateRange.from) return false;
+      if (dateRange.to && chequeDate > dateRange.to) return false;
+    }
     return true;
   });
 
@@ -218,7 +226,7 @@ export default function PartyDetailPage({
         <CardHeader>
           <div className="flex flex-col sm:flex-row gap-4 justify-between">
             <CardTitle>Cheques</CardTitle>
-            <div className="flex gap-2">
+            <div className="flex gap-2 flex-wrap">
               <div className="relative">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                 <Input
@@ -228,6 +236,11 @@ export default function PartyDetailPage({
                   className="pl-10 w-48"
                 />
               </div>
+              <DateRangePicker
+                dateRange={dateRange}
+                onDateRangeChange={setDateRange}
+                placeholder="Filter by date"
+              />
               <Select value={statusFilter} onValueChange={(v) => setStatusFilter(v ?? "all")}>
                 <SelectTrigger className="w-36">
                   <SelectValue placeholder="All statuses" />

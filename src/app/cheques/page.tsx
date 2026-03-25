@@ -25,6 +25,8 @@ import { formatCurrency } from "@/lib/utils";
 import { formatDate } from "@/lib/date-utils";
 import { StatusBadge } from "@/components/dashboard/recent-cheques";
 import { Search, Download, FileText, ChevronLeft, ChevronRight } from "lucide-react";
+import { DateRange } from "react-day-picker";
+import { DateRangePicker } from "@/components/date-range-picker";
 import Link from "next/link";
 
 const fetcher = (url: string) => fetch(url).then((r) => r.json());
@@ -56,6 +58,7 @@ export default function ChequesPage() {
   const [search, setSearch] = useState("");
   const [status, setStatus] = useState("all");
   const [partyId, setPartyId] = useState("all");
+  const [dateRange, setDateRange] = useState<DateRange | undefined>();
   const [page, setPage] = useState(1);
 
   const queryParams = new URLSearchParams();
@@ -64,6 +67,8 @@ export default function ChequesPage() {
   if (search) queryParams.set("search", search);
   if (status !== "all") queryParams.set("status", status);
   if (partyId !== "all") queryParams.set("partyId", partyId);
+  if (dateRange?.from) queryParams.set("dateFrom", dateRange.from.toISOString());
+  if (dateRange?.to) queryParams.set("dateTo", dateRange.to.toISOString());
 
   const { data, isLoading } = useSWR<ChequesResponse>(
     `/api/cheques?${queryParams.toString()}`,
@@ -92,8 +97,8 @@ export default function ChequesPage() {
         </Button>
       </div>
 
-      <div className="flex flex-col sm:flex-row gap-3">
-        <div className="relative flex-1">
+      <div className="flex flex-col sm:flex-row gap-3 flex-wrap">
+        <div className="relative flex-1 min-w-[200px]">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input
             placeholder="Search by cheque number..."
@@ -102,6 +107,11 @@ export default function ChequesPage() {
             className="pl-10"
           />
         </div>
+        <DateRangePicker
+          dateRange={dateRange}
+          onDateRangeChange={(range) => { setDateRange(range); setPage(1); }}
+          placeholder="Filter by date"
+        />
         <Select value={status} onValueChange={(v) => { setStatus(v ?? "all"); setPage(1); }}>
           <SelectTrigger className="w-40">
             <SelectValue placeholder="Status" />

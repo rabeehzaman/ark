@@ -19,6 +19,7 @@ import {
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
+import { PartyCombobox } from "@/components/party-combobox";
 
 interface ChequeFormData {
   id?: string;
@@ -33,7 +34,7 @@ interface ChequeFormData {
 interface ChequeFormDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  partyId: string;
+  partyId?: string;
   cheque?: ChequeFormData | null;
   onSuccess: () => void;
 }
@@ -46,6 +47,7 @@ export function ChequeFormDialog({
   onSuccess,
 }: ChequeFormDialogProps) {
   const isEditing = !!cheque?.id;
+  const showPartySelector = !partyId;
   const [form, setForm] = useState<ChequeFormData>(
     cheque || {
       date: "",
@@ -53,13 +55,18 @@ export function ChequeFormDialog({
       amount: "",
       status: "PENDING",
       remarks: "",
-      partyId,
+      partyId: partyId || "",
     }
   );
   const [loading, setLoading] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    const effectivePartyId = partyId || form.partyId;
+    if (!effectivePartyId) {
+      toast.error("Please select a party");
+      return;
+    }
     if (!form.chequeNumber.trim() || !form.amount.trim()) {
       toast.error("Cheque number and amount are required");
       return;
@@ -76,7 +83,7 @@ export function ChequeFormDialog({
         body: JSON.stringify({
           ...form,
           date: form.date || null,
-          partyId,
+          partyId: effectivePartyId,
         }),
       });
 
@@ -98,11 +105,20 @@ export function ChequeFormDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent>
+      <DialogContent className={showPartySelector ? "sm:max-w-md" : undefined}>
         <DialogHeader>
           <DialogTitle>{isEditing ? "Edit Cheque" : "Add Cheque"}</DialogTitle>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4 pt-2">
+          {showPartySelector && (
+            <div className="space-y-2">
+              <Label htmlFor="partySelect">Party *</Label>
+              <PartyCombobox
+                value={form.partyId}
+                onChange={(id) => setForm({ ...form, partyId: id })}
+              />
+            </div>
+          )}
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label htmlFor="chequeDate">Date</Label>

@@ -1,15 +1,19 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { slugify } from "@/lib/utils";
+import { requireOrgUser } from "@/lib/auth-utils";
 
 export async function GET(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { orgId, error } = await requireOrgUser();
+    if (error) return error;
+
     const { id } = await params;
     const party = await prisma.party.findFirst({
-      where: { OR: [{ id }, { slug: id }] },
+      where: { orgId: orgId!, OR: [{ id }, { slug: id }] },
       include: {
         cheques: { orderBy: { date: { sort: "desc", nulls: "last" } } },
         _count: { select: { cheques: true } },
@@ -55,7 +59,17 @@ export async function PATCH(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { orgId, error } = await requireOrgUser();
+    if (error) return error;
+
     const { id } = await params;
+
+    // Verify ownership
+    const existing = await prisma.party.findFirst({ where: { id, orgId: orgId! } });
+    if (!existing) {
+      return NextResponse.json({ error: "Party not found" }, { status: 404 });
+    }
+
     const body = await req.json();
     const { name, isActive } = body;
 
@@ -86,7 +100,17 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { orgId, error } = await requireOrgUser();
+    if (error) return error;
+
     const { id } = await params;
+
+    // Verify ownership
+    const existing = await prisma.party.findFirst({ where: { id, orgId: orgId! } });
+    if (!existing) {
+      return NextResponse.json({ error: "Party not found" }, { status: 404 });
+    }
+
     await prisma.party.delete({ where: { id } });
     return NextResponse.json({ success: true });
   } catch (error) {

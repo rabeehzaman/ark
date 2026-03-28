@@ -1,10 +1,15 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import * as XLSX from "xlsx";
+import { requireOrgUser } from "@/lib/auth-utils";
 
 export async function GET() {
   try {
+    const { orgId, error } = await requireOrgUser();
+    if (error) return error;
+
     const parties = await prisma.party.findMany({
+      where: { orgId: orgId! },
       include: {
         cheques: { orderBy: { date: { sort: "asc", nulls: "last" } } },
       },

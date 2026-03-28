@@ -6,26 +6,38 @@ import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useSession, signOut } from "next-auth/react";
 import { cn } from "@/lib/utils";
 import {
   LayoutDashboard,
   Users,
   FileText,
-  Upload,
+  Building2,
+  UserCog,
+  LogOut,
 } from "lucide-react";
 import { useState } from "react";
 
-const navItems = [
+const userNavItems = [
   { href: "/", label: "Dashboard", icon: LayoutDashboard },
   { href: "/parties", label: "Parties", icon: Users },
   { href: "/cheques", label: "Cheques", icon: FileText },
-  { href: "/import", label: "Import", icon: Upload },
+];
+
+const adminNavItems = [
+  { href: "/admin", label: "Dashboard", icon: LayoutDashboard },
+  { href: "/admin/organizations", label: "Organizations", icon: Building2 },
+  { href: "/admin/users", label: "Users", icon: UserCog },
 ];
 
 export function Header() {
   const { theme, setTheme } = useTheme();
   const pathname = usePathname();
+  const { data: session } = useSession();
   const [open, setOpen] = useState(false);
+
+  const isSuperAdmin = session?.user?.role === "SUPER_ADMIN";
+  const navItems = isSuperAdmin ? adminNavItems : userNavItems;
 
   return (
     <header className="sticky top-0 z-50 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
@@ -44,8 +56,8 @@ export function Header() {
             <nav className="p-2 space-y-1">
               {navItems.map((item) => {
                 const isActive =
-                  item.href === "/"
-                    ? pathname === "/"
+                  item.href === "/" || item.href === "/admin"
+                    ? pathname === item.href
                     : pathname.startsWith(item.href);
                 return (
                   <Link
@@ -65,6 +77,21 @@ export function Header() {
                 );
               })}
             </nav>
+            <div className="p-2 border-t mt-auto">
+              {session?.user && (
+                <div className="px-3 py-2 mb-1">
+                  <p className="text-sm font-medium truncate">{session.user.name}</p>
+                  <p className="text-xs text-muted-foreground truncate">{session.user.email}</p>
+                </div>
+              )}
+              <button
+                onClick={() => signOut({ callbackUrl: "/login" })}
+                className="flex w-full items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground"
+              >
+                <LogOut className="h-5 w-5" />
+                <span>Sign Out</span>
+              </button>
+            </div>
           </SheetContent>
         </Sheet>
 

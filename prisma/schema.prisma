@@ -7,15 +7,50 @@ datasource db {
   provider = "postgresql"
 }
 
-model Party {
+enum GlobalRole {
+  SUPER_ADMIN
+  USER
+}
+
+model User {
+  id        String     @id @default(cuid())
+  email     String     @unique
+  name      String
+  password  String
+  role      GlobalRole @default(USER)
+  orgId     String?
+  org       Organization? @relation(fields: [orgId], references: [id], onDelete: SetNull)
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
+
+  @@index([orgId])
+}
+
+model Organization {
   id        String   @id @default(cuid())
   name      String   @unique
   slug      String   @unique
   isActive  Boolean  @default(true)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+  users     User[]
+  parties   Party[]
+}
+
+model Party {
+  id        String       @id @default(cuid())
+  name      String
+  slug      String
+  isActive  Boolean      @default(true)
+  orgId     String
+  org       Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  createdAt DateTime     @default(now())
+  updatedAt DateTime     @updatedAt
   cheques   Cheque[]
 
+  @@unique([orgId, name])
+  @@unique([orgId, slug])
+  @@index([orgId])
   @@index([name])
 }
 

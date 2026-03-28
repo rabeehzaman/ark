@@ -1,14 +1,20 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { Prisma } from "@/generated/prisma/client";
+import { requireOrgUser } from "@/lib/auth-utils";
 
 export async function GET(req: NextRequest) {
   try {
+    const { orgId, error } = await requireOrgUser();
+    if (error) return error;
+
     const sp = req.nextUrl.searchParams;
     const dateFrom = sp.get("dateFrom");
     const dateTo = sp.get("dateTo");
 
-    const dateFilter: Prisma.ChequeWhereInput = {};
+    const dateFilter: Prisma.ChequeWhereInput = {
+      party: { orgId: orgId! },
+    };
     if (dateFrom || dateTo) {
       dateFilter.date = {};
       if (dateFrom) dateFilter.date.gte = new Date(dateFrom);
@@ -32,7 +38,7 @@ export async function GET(req: NextRequest) {
           include: { party: { select: { name: true, slug: true } } },
         }),
         prisma.party.findMany({
-          where: { cheques: { some: dateFilter } },
+          where: { orgId: orgId!, cheques: { some: dateFilter } },
           select: {
             id: true,
             name: true,

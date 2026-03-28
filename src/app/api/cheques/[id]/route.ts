@@ -1,13 +1,26 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { Prisma } from "@/generated/prisma/client";
+import { requireOrgUser } from "@/lib/auth-utils";
 
 export async function PATCH(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { orgId, error } = await requireOrgUser();
+    if (error) return error;
+
     const { id } = await params;
+
+    // Verify ownership through party
+    const existing = await prisma.cheque.findFirst({
+      where: { id, party: { orgId: orgId! } },
+    });
+    if (!existing) {
+      return NextResponse.json({ error: "Cheque not found" }, { status: 404 });
+    }
+
     const body = await req.json();
     const data: Record<string, unknown> = {};
 
@@ -38,7 +51,19 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { orgId, error } = await requireOrgUser();
+    if (error) return error;
+
     const { id } = await params;
+
+    // Verify ownership through party
+    const existing = await prisma.cheque.findFirst({
+      where: { id, party: { orgId: orgId! } },
+    });
+    if (!existing) {
+      return NextResponse.json({ error: "Cheque not found" }, { status: 404 });
+    }
+
     await prisma.cheque.delete({ where: { id } });
     return NextResponse.json({ success: true });
   } catch (error) {

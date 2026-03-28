@@ -1,15 +1,20 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { slugify } from "@/lib/utils";
+import { requireOrgUser } from "@/lib/auth-utils";
 
 export async function GET(req: NextRequest) {
   try {
+    const { orgId, error } = await requireOrgUser();
+    if (error) return error;
+
     const search = req.nextUrl.searchParams.get("search") || "";
 
     const parties = await prisma.party.findMany({
-      where: search
-        ? { name: { contains: search, mode: "insensitive" } }
-        : undefined,
+      where: {
+        orgId: orgId!,
+        ...(search ? { name: { contains: search, mode: "insensitive" } } : {}),
+      },
       include: {
         _count: { select: { cheques: true } },
         cheques: {
@@ -62,6 +67,9 @@ export async function GET(req: NextRequest) {
 
 export async function POST(req: NextRequest) {
   try {
+    const { orgId, error } = await requireOrgUser();
+    if (error) return error;
+
     const body = await req.json();
     const { name } = body;
 
@@ -75,7 +83,10 @@ export async function POST(req: NextRequest) {
     const slug = slugify(name.trim());
 
     const existing = await prisma.party.findFirst({
-      where: { OR: [{ name: name.trim() }, { slug }] },
+      where: {
+        orgId: orgId!,
+        OR: [{ name: name.trim() }, { slug }],
+      },
     });
     if (existing) {
       return NextResponse.json(
@@ -85,7 +96,7 @@ export async function POST(req: NextRequest) {
     }
 
     const party = await prisma.party.create({
-      data: { name: name.trim(), slug },
+      data: { name: name.trim(), slug, orgId: orgId! },
     });
 
     return NextResponse.json(party, { status: 201 });

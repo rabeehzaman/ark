@@ -1,9 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { Prisma } from "@/generated/prisma/client";
+import { requireOrgUser } from "@/lib/auth-utils";
 
 export async function GET(req: NextRequest) {
   try {
+    const { orgId, error } = await requireOrgUser();
+    if (error) return error;
+
     const sp = req.nextUrl.searchParams;
     const partyId = sp.get("partyId");
     const status = sp.get("status");
@@ -15,7 +19,9 @@ export async function GET(req: NextRequest) {
     const sortBy = sp.get("sortBy") || "date";
     const sortOrder = sp.get("sortOrder") || "desc";
 
-    const where: Prisma.ChequeWhereInput = {};
+    const where: Prisma.ChequeWhereInput = {
+      party: { orgId: orgId! },
+    };
 
     if (partyId) where.partyId = partyId;
     if (status && ["PENDING", "CLEARED", "BOUNCED"].includes(status)) {
@@ -62,6 +68,9 @@ export async function GET(req: NextRequest) {
 
 export async function POST(req: NextRequest) {
   try {
+    const { orgId, error } = await requireOrgUser();
+    if (error) return error;
+
     const body = await req.json();
     const { date, chequeNumber, amount, status, remarks, partyId } = body;
 
@@ -69,6 +78,17 @@ export async function POST(req: NextRequest) {
       return NextResponse.json(
         { error: "Cheque number, amount, and party are required" },
         { status: 400 }
+      );
+    }
+
+    // Verify the party belongs to user's org
+    const party = await prisma.party.findFirst({
+      where: { id: partyId, orgId: orgId! },
+    });
+    if (!party) {
+      return NextResponse.json(
+        { error: "Party not found" },
+        { status: 404 }
       );
     }
 

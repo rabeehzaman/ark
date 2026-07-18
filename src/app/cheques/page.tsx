@@ -1,7 +1,8 @@
 "use client";
 
 import useSWR from "swr";
-import { useState } from "react";
+import { Suspense, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   Table,
@@ -54,11 +55,27 @@ interface Party {
   slug: string;
 }
 
-export default function ChequesPage() {
+const VALID_STATUSES = ["CLEARED", "BOUNCED", "PENDING"];
+
+function ChequesPageContent() {
+  const searchParams = useSearchParams();
+  const initialStatus = searchParams.get("status");
+  const initialFrom = searchParams.get("dateFrom");
+  const initialTo = searchParams.get("dateTo");
+
   const [search, setSearch] = useState("");
-  const [status, setStatus] = useState("all");
+  const [status, setStatus] = useState(
+    initialStatus && VALID_STATUSES.includes(initialStatus) ? initialStatus : "all"
+  );
   const [partyId, setPartyId] = useState("all");
-  const [dateRange, setDateRange] = useState<DateRange | undefined>();
+  const [dateRange, setDateRange] = useState<DateRange | undefined>(
+    initialFrom || initialTo
+      ? {
+          from: initialFrom ? new Date(initialFrom) : undefined,
+          to: initialTo ? new Date(initialTo) : undefined,
+        }
+      : undefined
+  );
   const [page, setPage] = useState(1);
 
   const queryParams = new URLSearchParams();
@@ -228,5 +245,13 @@ export default function ChequesPage() {
         </div>
       )}
     </div>
+  );
+}
+
+export default function ChequesPage() {
+  return (
+    <Suspense fallback={null}>
+      <ChequesPageContent />
+    </Suspense>
   );
 }

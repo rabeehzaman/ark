@@ -52,7 +52,7 @@ export default function DashboardPage() {
         </div>
       </div>
 
-      <StatCards stats={data?.stats ?? null} isLoading={isLoading} />
+      <StatCards stats={data?.stats ?? null} isLoading={isLoading} dateRange={dateRange} />
 
       <QuickActions onNewCheque={() => setChequeFormOpen(true)} />
 
